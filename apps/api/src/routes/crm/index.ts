@@ -17,7 +17,7 @@ async function planGate(req: Request, _res: Response, next: NextFunction) {
   if (path.startsWith("/settings")) return next();
   const sub = await currentSubscription(req.businessId!);
   const f = (sub?.plan.features || {}) as Record<string, boolean>;
-  if (req.method !== "GET" && !sub?.usable) throw new HttpError(402, "Your Jippronex plan has expired. Renew to continue billing — your data is safe.");
+  if (req.method !== "GET" && !sub?.usable) throw new HttpError(402, "Your JipproBill plan has expired. Renew to continue billing — your data is safe.");
   const needs =
     path.startsWith("/purchases") ? "purchase" :
     path.startsWith("/stock") ? "inventory" :

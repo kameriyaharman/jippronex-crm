@@ -39,7 +39,7 @@ export function invoiceHtml(inv: any, format: "A4" | "A5" | "THERMAL" = "A4") {
   <div><div class=lab>AMOUNT IN WORDS</div><b>${esc(inv.amountInWords)}</b></div>
   <div style="display:flex;justify-content:space-between;margin-top:24px"><div>${b.bankName ? `<div class=lab>BANK DETAILS</div><div>${esc(b.bankName)}</div><div>A/c ${esc(b.bankAccount || "")} · IFSC ${esc(b.bankIfsc || "")}</div>` : ""}${b.upiId ? `<div>UPI: ${esc(b.upiId)}</div>` : ""}<div style="white-space:pre-line;margin-top:6px">${esc(b.terms || "")}</div></div>
   <div style="text-align:right"><b>For ${esc(b.name.toUpperCase())}</b><div style="height:40px"></div><div style="border-top:1px solid #1b1d3a;padding-top:3px;color:#6b7090">Authorised Signatory</div></div></div>
-  <div style="margin-top:16px;color:#9a9db5;font-size:8px;display:flex;justify-content:space-between"><span>This is a computer generated invoice</span><span>Powered by Jippronex · jippronex.com</span></div>
+  <div style="margin-top:16px;color:#9a9db5;font-size:8px;display:flex;justify-content:space-between"><span>This is a computer generated invoice</span><span>Powered by JipproBill · jippronex.com</span></div>
   </body></html>`;
 }
 

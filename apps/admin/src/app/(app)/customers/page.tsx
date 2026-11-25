@@ -21,7 +21,7 @@ function Customers() {
   const { data: team } = useApi<any>("/sellers");
   return (
     <div>
-      <PageHeader title="Customers" sub="Every business that bought Jippronex — plan, price, who sold it, validity">
+      <PageHeader title="Customers" sub="Every business that bought JipproBill — plan, price, who sold it, validity">
         <button className="btn-outline" onClick={() => download("/reports/customers.xlsx", "jippronex-customers.xlsx")}><FileSpreadsheet className="size-4" />Export</button>
         <Link href="/sales/new" className="btn-primary"><CirclePlus className="size-4" />New Sale</Link>
       </PageHeader>

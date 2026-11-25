@@ -130,7 +130,7 @@ adminRouter.get("/customers/:id", async (req, res) => {
     customPrice: custom,
     usage: { invoicesThisMonth: inv.c, products: prod.c, maxProducts: plan?.maxProducts ?? 0, users: users.c, usersAllowed: row.subscription?.usersAllowed ?? 1,
       storageGb: plan?.storageGb ?? 0, lastLoginAt: row.owner?.lastLoginAt, lastLoginVia: row.owner?.via },
-    whatsapp: row.owner?.phone ? waLink(row.owner.phone, `Hi ${row.owner.name}, this is Jippronex support.`) : null,
+    whatsapp: row.owner?.phone ? waLink(row.owner.phone, `Hi ${row.owner.name}, this is JipproBill support.`) : null,
   });
 });
 
@@ -213,9 +213,9 @@ adminRouter.post("/customers/:id/order", async (req, res) => {
 
 async function linkMessage(businessId: string, pay: { id: string; linkUrl: string | null; description: string | null; status: string }, total: number) {
   const biz = await db.query.businesses.findFirst({ where: eq(S.businesses.id, businessId) });
-  const text = `Hi ${biz?.ownerName || biz?.name}, please complete your Jippronex payment of ₹${total.toLocaleString("en-IN")} (${pay.description}).\nPay securely: ${pay.linkUrl}\nYour account activates automatically after payment.`;
+  const text = `Hi ${biz?.ownerName || biz?.name}, please complete your JipproBill payment of ₹${total.toLocaleString("en-IN")} (${pay.description}).\nPay securely: ${pay.linkUrl}\nYour account activates automatically after payment.`;
   return { paymentId: pay.id, url: pay.linkUrl, status: pay.status, amount: total, whatsapp: waLink(biz?.phone, text), text,
-    sms: `sms:+91${biz?.phone}?body=${encodeURIComponent(text)}`, email: `mailto:${biz?.email || ""}?subject=${encodeURIComponent("Jippronex payment link")}&body=${encodeURIComponent(text)}` };
+    sms: `sms:+91${biz?.phone}?body=${encodeURIComponent(text)}`, email: `mailto:${biz?.email || ""}?subject=${encodeURIComponent("JipproBill payment link")}&body=${encodeURIComponent(text)}` };
 }
 
 // ─────────── New sale ───────────
@@ -417,7 +417,7 @@ adminRouter.get("/payments/:id", async (req, res) => {
 
 // ─────────── Gateway & collection rules ───────────
 const DEFAULT_RULES = { autoActivate: true, autopay: true, autoInvoice: true, retryFailed: true, suspendAfterDays: 7, passCharges: false,
-  reminderDays: [15, 7, 3, 0], reminderTemplate: "Hi {name}, your Jippronex {plan} plan expires on {date}.\nRenew in one tap: {link}" };
+  reminderDays: [15, 7, 3, 0], reminderTemplate: "Hi {name}, your JipproBill {plan} plan expires on {date}.\nRenew in one tap: {link}" };
 adminRouter.get("/gateway", superOnly, async (_req, res) => {
   const cfgs = await db.select().from(S.gatewayConfigs);
   const rules = (await db.query.appSettings.findFirst({ where: eq(S.appSettings.key, "collection") }))?.value ?? DEFAULT_RULES;
@@ -491,7 +491,7 @@ async function renewalLink(businessId: string, winBackPct = 0) {
   await db.update(S.subscriptions).set({ remindersSent: sql`${S.subscriptions.remindersSent} + 1`, lastReminderAt: new Date() }).where(eq(S.subscriptions.id, sub.id));
   const biz = await db.query.businesses.findFirst({ where: eq(S.businesses.id, businessId) });
   const rules = ((await db.query.appSettings.findFirst({ where: eq(S.appSettings.key, "collection") }))?.value ?? DEFAULT_RULES) as typeof DEFAULT_RULES;
-  const text = (winBackPct ? `Hi {name}, we miss you! Get ${winBackPct}% off on your Jippronex {plan} plan.\nRenew now: {link}` : rules.reminderTemplate || DEFAULT_RULES.reminderTemplate)
+  const text = (winBackPct ? `Hi {name}, we miss you! Get ${winBackPct}% off on your JipproBill {plan} plan.\nRenew now: {link}` : rules.reminderTemplate || DEFAULT_RULES.reminderTemplate)
     .replace("{name}", biz?.ownerName || biz?.name || "").replace("{plan}", sub.plan.name)
     .replace("{date}", sub.endsAt ? sub.endsAt.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "-").replace("{link}", out.payment.linkUrl || "");
   return { businessId, name: biz?.name, paymentId: out.payment.id, url: out.payment.linkUrl, amount: out.amount.total, text, whatsapp: waLink(biz?.phone, text) };

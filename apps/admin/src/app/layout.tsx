@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { ToastProvider } from "@/components/ui";
 
-export const metadata: Metadata = { title: "Jippronex — Master Admin", description: "GST billing, inventory and accounts for Indian businesses" };
+export const metadata: Metadata = { title: "JipproBill — Master Admin", description: "GST billing, inventory and accounts for Indian businesses" };
 export const viewport: Viewport = { themeColor: "#0b46c4" };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

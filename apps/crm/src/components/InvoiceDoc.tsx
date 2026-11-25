@@ -147,7 +147,7 @@ function TaxInvoice({ inv, template, o }: { inv: any; template: string; o: DocOp
         </div>
       </div>
       {inv.notes && <div className="mt-4 text-muted">Note: {inv.notes}</div>}
-      <div className="flex justify-between mt-6 pt-3 border-t border-line text-[9px] text-faint"><span>This is a computer generated invoice</span><span>Powered by Jippronex · jippronex.com</span></div>
+      <div className="flex justify-between mt-6 pt-3 border-t border-line text-[9px] text-faint"><span>This is a computer generated invoice</span><span>Powered by JipproBill · jippronex.com</span></div>
     </div>
   );
 }

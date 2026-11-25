@@ -17,7 +17,7 @@ export default function Login() {
     <div className="min-h-screen grid place-items-center p-6">
       <form onSubmit={go} className="card p-8 w-full max-w-sm space-y-4 shadow-xl shadow-brand/5">
         <Logo />
-        <div><h1 className="text-xl font-extrabold mt-4">Master Admin</h1><p className="text-sm text-muted">Sign in to manage Jippronex customers & subscriptions</p></div>
+        <div><h1 className="text-xl font-extrabold mt-4">Master Admin</h1><p className="text-sm text-muted">Sign in to manage JipproBill customers & subscriptions</p></div>
         <Field label="Email"><input type="email" autoFocus className="input" value={email} onChange={(e) => setEmail(e.target.value)} /></Field>
         <Field label="Password"><input type="password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
         <ErrorBox error={err} />

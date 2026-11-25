@@ -8,14 +8,10 @@ export const cx = clsx;
 export function Logo({ sub = "Master Admin", small = false }: { sub?: string; small?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <svg width={small ? 30 : 36} height={small ? 30 : 36} viewBox="0 0 40 40" aria-hidden>
-        <rect width="40" height="40" rx="11" fill="#0b46c4" />
-        <circle cx="20" cy="20" r="11" fill="none" stroke="#9cc4fa" strokeWidth="2" />
-        <path d="M9 20h22M20 9c4 3.5 4 18.5 0 22M20 9c-4 3.5-4 18.5 0 22" stroke="#9cc4fa" strokeWidth="1.6" fill="none" />
-        <path d="M23 13v10.5a4.5 4.5 0 0 1-8.6 1.8" stroke="#fff" strokeWidth="3" strokeLinecap="round" fill="none" />
-      </svg>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo.png" alt="JipproBill" width={small ? 34 : 42} height={small ? 34 : 42} className="shrink-0" />
       <div className="leading-tight">
-        <div className="font-extrabold tracking-[0.12em] text-brand text-[15px]">JIPPRONEX</div>
+        <div className="font-extrabold text-[17px] tracking-tight text-brand">Jippro<span className="text-[#E8A800]">Bill</span></div>
         {sub && <div className="text-[10.5px] text-muted font-medium">{sub}</div>}
       </div>
     </div>
@@ -168,7 +164,7 @@ export function Upgrade({ what }: { what: string }) {
   return (
     <div className="card p-10 text-center max-w-lg mx-auto mt-10">
       <div className="text-xl font-extrabold">{what} is not in your plan</div>
-      <p className="text-muted mt-2 text-sm">Upgrade your Jippronex plan to unlock it. Your existing data stays safe.</p>
+      <p className="text-muted mt-2 text-sm">Upgrade your JipproBill plan to unlock it. Your existing data stays safe.</p>
       <a href="/settings?tab=plan" className="btn-primary mt-5">See plans</a>
     </div>
   );

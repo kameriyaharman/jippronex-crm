@@ -24,8 +24,8 @@ export default function Splash() {
   return (
     <LinearGradient colors={["#0D3FB8", "#1C64EC", "#3C8DF5"]} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={{ flex: 1, alignItems: "center", justifyContent: "center" }}>
       <StatusBar style="light" />
-      <Logo size={150} />
-      <Txt w="700" size={30} color="#fff" style={{ letterSpacing: 5, marginTop: 18 }}>JIPPRONEX</Txt>
+      <Logo size={170} />
+      <Txt w="700" size={34} color="#fff" style={{ marginTop: 18 }}>Jippro<Txt w="700" size={34} color="#FFD23F">Bill</Txt></Txt>
       <Txt w="500" size={14} color="#D6E4FF" style={{ marginTop: 6 }}>Smart Billing · Inventory · Accounts</Txt>
       <View style={{ position: "absolute", bottom: 56 }}><Txt size={12.5} color="#DCE7FF">Technology That Empowers Business</Txt></View>
     </LinearGradient>

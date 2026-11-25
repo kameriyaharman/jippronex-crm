@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Jippronex",
+    "name": "JipproBill",
     "slug": "jippronex",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -32,7 +32,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Jippronex to use the camera to scan product barcodes.",
+          "cameraPermission": "Allow JipproBill to use the camera to scan product barcodes.",
           "recordAudioAndroid": false,
           "barcodeScannerEnabled": true
         }

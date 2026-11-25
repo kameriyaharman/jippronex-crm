@@ -20,7 +20,7 @@ app.use(express.json({ limit: "8mb", verify: (req: any, _res, buf) => { if (req.
 app.use(express.urlencoded({ extended: false }));
 app.use(morgan(process.env.NODE_ENV === "production" ? "tiny" : "dev"));
 
-app.get("/", (_req, res) => res.json({ name: "Jippronex API", docs: "/health" }));
+app.get("/", (_req, res) => res.json({ name: "JipproBill API", docs: "/health" }));
 app.use(publicRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/admin", adminRouter);
@@ -32,7 +32,7 @@ const port = Number(process.env.PORT || 4000);
 (async () => {
   await runMigrations();
   await bootstrap();
-  app.listen(port, () => console.log(`Jippronex API on :${port}`));
+  app.listen(port, () => console.log(`JipproBill API on :${port}`));
   startJobs();
   if (process.env.SEED_DEMO === "true") {
     const { sql } = await import("drizzle-orm");

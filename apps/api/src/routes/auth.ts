@@ -40,7 +40,7 @@ authRouter.post("/register", async (req, res) => {
   if (existing) {
     // Without SMS verification we can't prove ownership — never let a stranger take over an existing business account
     const linked = await db.select({ id: S.memberships.id }).from(S.memberships).where(eq(S.memberships.userId, existing.id)).limit(1);
-    if (linked.length || phone === process.env.DEMO_PHONE) throw bad("This number is already linked to a business. Ask your shop owner or Jippronex support to set your password.");
+    if (linked.length || phone === process.env.DEMO_PHONE) throw bad("This number is already linked to a business. Ask your shop owner or JipproBill support to set your password.");
   }
   if (d.email) {
     const e = await db.query.users.findFirst({ where: eq(S.users.email, d.email) });

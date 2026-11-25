@@ -28,7 +28,7 @@ const page = (title: string, body: string) => `<!doctype html><html><head><meta 
 <style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto;background:#f5f7fb;margin:0;display:grid;place-items:center;min-height:100vh;color:#1b1d3a}
 .c{background:#fff;border-radius:16px;padding:28px;max-width:380px;width:90%;box-shadow:0 10px 30px #0b46c41a;text-align:center}
 .b{display:block;background:#0b46c4;color:#fff;padding:14px;border-radius:10px;text-decoration:none;font-weight:700;margin-top:18px;border:0;width:100%;font-size:15px;cursor:pointer}
-.amt{font-size:34px;font-weight:800;margin:8px 0}.m{color:#6b7090;font-size:14px}.logo{font-weight:800;color:#0b46c4;letter-spacing:1px}</style></head><body><div class="c"><div class="logo">JIPPRONEX</div>${body}</div></body></html>`;
+.amt{font-size:34px;font-weight:800;margin:8px 0}.m{color:#6b7090;font-size:14px}.logo{font-weight:800;color:#0b46c4;letter-spacing:1px}</style></head><body><div class="c"><div class="logo">Jippro<span style="color:#E8A800">Bill</span></div>${body}</div></body></html>`;
 
 publicRouter.get("/pay/:code", async (req, res) => {
   const p = await db.query.subscriptionPayments.findFirst({ where: eq(S.subscriptionPayments.linkCode, String(req.params.code)) });
@@ -37,7 +37,7 @@ publicRouter.get("/pay/:code", async (req, res) => {
   if (p.status === "CAPTURED" || p.status === "TO_DEPOSIT") return res.send(page("Paid", `<h2>Payment received ✓</h2><p class="m">${p.description}<br/>Invoice ${p.invoiceNo}</p>`));
   if (p.linkUrl && !p.linkUrl.includes(`/pay/${p.linkCode}`)) return res.redirect(p.linkUrl);
   const sim = process.env.ALLOW_PAYMENT_SIMULATION === "true";
-  res.send(page("Pay Jippronex", `<p class="m">${biz?.name}</p><div class="amt">₹${p.amount.toLocaleString("en-IN")}</div><p class="m">${p.description}<br/>incl. 18% GST</p>
+  res.send(page("Pay JipproBill", `<p class="m">${biz?.name}</p><div class="amt">₹${p.amount.toLocaleString("en-IN")}</div><p class="m">${p.description}<br/>incl. 18% GST</p>
     ${sim ? `<form method="post" action="/pay/${p.linkCode}/simulate"><button class="b">Simulate successful payment (test)</button></form>` : `<p class="m" style="margin-top:18px">Online payment is being set up. Please pay via UPI / bank transfer and share the reference with Jippronex.</p>`}`));
 });
 
@@ -53,7 +53,7 @@ publicRouter.get("/pay/:code/done", async (req, res) => {
   // Razorpay redirects here after payment; activation happens via webhook (source of truth).
   const p = await db.query.subscriptionPayments.findFirst({ where: eq(S.subscriptionPayments.linkCode, String(req.params.code)) });
   const ok = req.query.razorpay_payment_link_status === "paid" || p?.status === "CAPTURED";
-  res.send(page("Thank you", ok ? `<h2>Payment successful ✓</h2><p class="m">Your Jippronex account will be active in a few seconds. You can go back to the app.</p>`
+  res.send(page("Thank you", ok ? `<h2>Payment successful ✓</h2><p class="m">Your JipproBill account will be active in a few seconds. You can go back to the app.</p>`
     : `<h2>Payment pending</h2><p class="m">If money was debited, it will reflect shortly.</p>`));
 });
 

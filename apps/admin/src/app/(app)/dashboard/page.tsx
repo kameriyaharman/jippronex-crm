@@ -23,7 +23,7 @@ export default function Dashboard() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h1 className="text-[26px] font-extrabold tracking-tight">Master Dashboard</h1><p className="text-sm text-muted">All Jippronex billing software sales & subscriptions — live</p></div>
+        <div><h1 className="text-[26px] font-extrabold tracking-tight">Master Dashboard</h1><p className="text-sm text-muted">All JipproBill billing software sales & subscriptions — live</p></div>
         <Seg value={range} onChange={setRange} options={[{ value: "month", label: "This month" }, { value: "last", label: "Last month" }, { value: "year", label: "This year" }]} />
       </div>
       {!d ? <Loading /> : <>

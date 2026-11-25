@@ -40,7 +40,7 @@ export default function Login() {
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24, gap: 16 }} keyboardShouldPersistTaps="handled">
-          <View style={{ marginTop: 20 }}><Logo size={64} /></View>
+          <View style={{ marginTop: 20 }}><Logo size={88} /></View>
           <View style={{ gap: 4, marginTop: 8 }}>
             <Txt w="700" size={26}>Welcome 👋</Txt>
             <Txt color={C.muted}>{mode === "mobile" ? "Login with your mobile number" : "Login with your email"}</Txt>

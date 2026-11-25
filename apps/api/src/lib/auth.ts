@@ -67,7 +67,7 @@ export async function requireBusiness(req: Request, _res: Response, next: NextFu
     .orderBy(desc(schema.memberships.createdAt));
   const row = wanted ? rows.find((r) => r.b.id === wanted) : rows[0];
   if (!row) throw new HttpError(428, "Business setup required");
-  if (row.b.status === "SUSPENDED") throw new HttpError(423, "This account is suspended. Please contact Jippronex support.");
+  if (row.b.status === "SUSPENDED") throw new HttpError(423, "This account is suspended. Please contact JipproBill support.");
   req.businessId = row.b.id;
   req.role = row.m.role;
   next();
