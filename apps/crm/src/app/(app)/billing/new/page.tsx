@@ -109,7 +109,7 @@ function NewInvoice() {
       <ErrorBox error={err} />
       <div className="grid xl:grid-cols-[1fr_340px] gap-4 items-start">
         <div className="space-y-4 min-w-0">
-          <div className="card p-4 grid grid-cols-2 lg:grid-cols-[auto_1.3fr_1fr_1fr] gap-3 items-end">
+          <div className="card p-4 grid grid-cols-1 sm:grid-cols-2 2xl:grid-cols-[auto_1.3fr_1fr_1fr] gap-3 items-end">
             <Field label="Bill type"><Seg value={billType} onChange={setBillType} options={[{ value: "GST", label: "GST" }, { value: "NON_GST", label: "Non-GST" }]} /></Field>
             <Field label="Customer"><PartyPicker type="CUSTOMER" value={party} onChange={setParty} allowWalkIn /></Field>
             <Field label="Invoice no. · Date">

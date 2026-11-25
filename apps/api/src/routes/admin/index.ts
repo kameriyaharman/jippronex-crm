@@ -233,7 +233,7 @@ async function quote(d: z.infer<typeof saleSchema>, isPartner: boolean) {
 }
 
 adminRouter.post("/sales/quote", async (req, res) => {
-  const d = parse(saleSchema.partial({ businessName: true, ownerName: true, phone: true }), req.body) as z.infer<typeof saleSchema>;
+  const d = parse(saleSchema.omit({ businessName: true, ownerName: true, phone: true, email: true, gstin: true }), req.body) as z.infer<typeof saleSchema>;
   const q = await quote(d, req.admin!.role === "PARTNER");
   res.json({ ...q, plan: { id: q.plan.id, name: q.plan.name } });
 });

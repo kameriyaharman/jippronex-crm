@@ -57,11 +57,11 @@ export default function Payments() {
             </div>
             <div className="card p-5">
               <div className="flex justify-between"><div className="font-bold">Expenses by category</div><div className="text-xs text-muted">{new Date(month + "-15").toLocaleString("en-IN", { month: "long" })}</div></div>
-              {ex && ex.byCategory.length ? <div className="flex items-center gap-4 mt-3">
-                <div className="size-36 shrink-0"><ResponsiveContainer><PieChart><Pie data={ex.byCategory} dataKey="amount" nameKey="category" innerRadius={42} outerRadius={66} paddingAngle={2} stroke="none">
+              {ex && ex.byCategory.length ? <div className="flex items-center gap-3 mt-3">
+                <div className="size-28 2xl:size-36 shrink-0"><ResponsiveContainer><PieChart><Pie data={ex.byCategory} dataKey="amount" nameKey="category" innerRadius={42} outerRadius={66} paddingAngle={2} stroke="none">
                   {ex.byCategory.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}</Pie></PieChart></ResponsiveContainer></div>
-                <div className="space-y-1.5 text-sm">{ex.byCategory.map((c: any, i: number) => (
-                  <div key={c.category} className="flex items-center gap-2"><span className="size-2.5 rounded-full" style={{ background: COLORS[i % COLORS.length] }} />{c.category}<b className="ml-auto pl-3">{Math.round((c.amount / totalExp) * 100)}%</b></div>))}</div>
+                <div className="space-y-1.5 text-sm flex-1 min-w-0">{ex.byCategory.map((c: any, i: number) => (
+                  <div key={c.category} className="flex items-center gap-2"><span className="size-2.5 rounded-full shrink-0" style={{ background: COLORS[i % COLORS.length] }} /><span className="truncate">{c.category}</span><b className="ml-auto pl-2">{Math.round((c.amount / totalExp) * 100)}%</b></div>))}</div>
               </div> : <div className="text-sm text-muted mt-4">No expenses this month</div>}
             </div>
           </div>
