@@ -44,7 +44,7 @@
     "scheme": "jippronex",
     "primaryColor": "#0B46C4",
     "extra": {
-      "apiUrl": "https://api.jippronex.com",
+      "apiUrl": "https://api-production-6c83491d.up.railway.app",
       "eas": {}
     }
   }
