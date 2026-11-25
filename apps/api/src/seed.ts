@@ -320,7 +320,7 @@ if (isCli) (async () => {
   const t = Date.now();
   const sharma = await seedShop();
   console.log(`Shop seeded in ${((Date.now() - t) / 1000).toFixed(1)}s`);
-  await seedSaas(sharma, true);
+  await seedSaas(sharma, !process.argv.includes("--no-logins"));
   console.log("Seed complete. CRM login: 9830012345 · Admin: admin@jippronex.com / Admin@123");
   await pool.end();
 })().catch(async (e) => { console.error(e); await pool.end(); process.exit(1); });
