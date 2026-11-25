@@ -14,7 +14,7 @@ export function Screen({ title, sub, children, scroll = true, right, back = true
   title?: string; sub?: string; children: ReactNode; scroll?: boolean; right?: ReactNode; back?: boolean; footer?: ReactNode; refreshing?: boolean; onRefresh?: () => void; pad?: boolean;
 }) {
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={["top", "left", "right"]}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={footer || !back ? ["top", "left", "right"] : ["top", "left", "right", "bottom"]}>
       {title != null && (
         <View style={s.header}>
           {back && <Pressable hitSlop={12} onPress={() => (router.canGoBack() ? router.back() : router.replace("/"))} style={{ marginRight: 10 }}><Feather name="arrow-left" size={22} color={C.ink} /></Pressable>}

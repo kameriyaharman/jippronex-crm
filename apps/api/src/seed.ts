@@ -67,6 +67,13 @@ const supplierFor = (name: string) =>
   /Parle/.test(name) ? "Parle Depot" : /Tata/.test(name) ? "Tata Consumer" : /Dabur/.test(name) ? "Dabur Agency" : /Parachute/.test(name) ? "Marico Depot" :
   /Maggi|Nescafe/.test(name) ? "Nestle Agency" : "ITC Distributors";
 
+/** Demo data should never show negative stock: top such items back up with a stock adjustment. */
+async function fixNegativeStock(businessId: string) {
+  const neg = await db.select().from(S.products).where(sql`${S.products.businessId} = ${businessId} and ${S.products.stock} < 0`);
+  for (const p of neg) await db.transaction((tx) => moveStock(tx, { businessId, productId: p.id, qty: p.minStock * 3 - p.stock, reason: "ADJUSTMENT", note: "Physical stock count" }));
+  return neg.length;
+}
+
 async function seedShop(code?: string) {
   const [owner] = await db.insert(S.users).values({ name: "Rakesh Sharma", phone: "9830012345", email: "rakesh@sharmatraders.in" }).returning();
   const n = code ? { value: 0 } : (await db.execute(sql`insert into counters (business_id, key, value) values ('__jippronex__','CUSTOMER',214) on conflict (business_id,key) do update set value = 214 returning value`)).rows[0] as any;
@@ -188,6 +195,7 @@ async function seedShop(code?: string) {
     const [cur] = await db.select().from(S.products).where(eq(S.products.id, p.id));
     if (cur.stock !== target) await db.transaction((tx) => moveStock(tx, { businessId: b, productId: p.id, qty: target - cur.stock, reason: "ADJUSTMENT", note: "Physical stock count", date: addDays(today, -1) }));
   }
+  await fixNegativeStock(b);
   return biz;
 }
 
@@ -316,7 +324,12 @@ if (isCli) (async () => {
     // Production demo account: only the Sharma Traders shop, no fake SaaS customers/revenue.
     await bootstrap();
     const exists = (await db.execute(sql`select 1 from businesses where code = 'JX-DEMO' or phone = '9830012345' limit 1`)).rows.length;
-    if (exists) { console.log("Demo shop already present"); await pool.end(); return; }
+    if (exists) {
+      const demo = (await db.execute(sql`select id from businesses where code = 'JX-DEMO' limit 1`)).rows[0] as any;
+      const fixed = demo ? await fixNegativeStock(demo.id) : 0;
+      console.log(`Demo shop already present${fixed ? ` · fixed ${fixed} negative stock items` : ""}`);
+      await pool.end(); return;
+    }
     const t = Date.now();
     const shop = await seedShop("JX-DEMO");
     const plan = await db.query.plans.findFirst({ where: eq(S.plans.code, "COMPLETE") });
