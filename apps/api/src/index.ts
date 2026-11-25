@@ -34,4 +34,10 @@ const port = Number(process.env.PORT || 4000);
   await bootstrap();
   app.listen(port, () => console.log(`Jippronex API on :${port}`));
   startJobs();
+  if (process.env.SEED_DEMO === "true") {
+    const { sql } = await import("drizzle-orm");
+    const { db } = await import("./db/index.js");
+    const r = await db.execute(sql`select count(*)::int as c from businesses`);
+    if (!(r.rows[0] as any).c) { console.log("SEED_DEMO: loading demo data…"); (await import("./seed.js")).seedDemo().catch((e) => console.error("Demo seed failed", e)); }
+  }
 })().catch((e) => { console.error(e); process.exit(1); });

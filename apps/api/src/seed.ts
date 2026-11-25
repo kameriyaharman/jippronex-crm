@@ -195,13 +195,13 @@ const CITIES = [["Asansol", "19"], ["Durgapur", "19"], ["Dhanbad", "20"], ["Boka
 const SHOP_WORDS = ["Agencies", "Traders", "Stores", "Medical", "Electronics", "Hardware", "Garments", "Enterprises", "Mart", "Distributors"];
 const NAMES = ["Agarwal", "Singh", "Mondal", "Ghosh", "Jain", "Mahato", "Prasad", "Das", "Kumar", "Saha", "Banerjee", "Yadav", "Mishra", "Sinha", "Roy", "Paul"];
 
-async function seedSaas(sharma: typeof S.businesses.$inferSelect) {
+async function seedSaas(sharma: typeof S.businesses.$inferSelect, withLogins = true) {
   const plans = await db.select().from(S.plans);
   const plan = (c: string) => plans.find((p) => p.code === c)!;
   const [amit] = await db.insert(S.sellers).values({ name: "Amit", type: "STAFF", city: "Asansol", phone: "9830055001", commissionPct: 10 }).returning();
   const [priya] = await db.insert(S.sellers).values({ name: "Priya", type: "STAFF", city: "Kolkata", phone: "9830055002", commissionPct: 10 }).returning();
   const [rajesh] = await db.insert(S.sellers).values({ name: "Rajesh", type: "PARTNER", city: "Dhanbad", phone: "9431055003", commissionPct: 20 }).returning();
-  await db.insert(S.adminUsers).values([
+  if (withLogins) await db.insert(S.adminUsers).values([
     { name: "Amit", email: "amit@jippronex.com", passwordHash: await bcrypt.hash("Amit@123", 10), role: "SALES", sellerId: amit.id },
     { name: "Rajesh Traders", email: "rajesh@partner.jippronex.com", passwordHash: await bcrypt.hash("Rajesh@123", 10), role: "PARTNER", sellerId: rajesh.id },
   ]);
@@ -301,7 +301,16 @@ async function seedSaas(sharma: typeof S.businesses.$inferSelect) {
   await db.insert(S.commissionPayouts).values([{ sellerId: rajesh.id, amount: 20000, note: "Q1 payout" }, { sellerId: amit.id, amount: 15000, note: "Sep payout" }]);
 }
 
-(async () => {
+/** Used by the API on boot when SEED_DEMO=true and the database has no businesses yet. */
+export async function seedDemo(opts: { withLogins?: boolean } = {}) {
+  const t = Date.now();
+  const sharma = await seedShop();
+  await seedSaas(sharma, opts.withLogins ?? false);
+  console.log(`Demo data loaded in ${((Date.now() - t) / 1000).toFixed(1)}s`);
+}
+
+const isCli = /seed\.(ts|js)$/.test(process.argv[1] || "");
+if (isCli) (async () => {
   await runMigrations();
   const doReset = process.argv.includes("--reset");
   const [c] = await db.select({ c: sql<number>`count(*)::int` }).from(S.businesses);
@@ -311,7 +320,7 @@ async function seedSaas(sharma: typeof S.businesses.$inferSelect) {
   const t = Date.now();
   const sharma = await seedShop();
   console.log(`Shop seeded in ${((Date.now() - t) / 1000).toFixed(1)}s`);
-  await seedSaas(sharma);
+  await seedSaas(sharma, true);
   console.log("Seed complete. CRM login: 9830012345 · Admin: admin@jippronex.com / Admin@123");
   await pool.end();
 })().catch(async (e) => { console.error(e); await pool.end(); process.exit(1); });
