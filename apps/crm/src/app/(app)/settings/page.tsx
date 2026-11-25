@@ -93,10 +93,10 @@ function Users({ editable }: { editable: boolean }) {
   const toast = useToast();
   const { data, reload } = useApi<any>("/settings/users");
   const [add, setAdd] = useState(false);
-  const [f, setF] = useState({ name: "", phone: "", role: "BILLING" });
+  const [f, setF] = useState({ name: "", phone: "", role: "BILLING", password: "" });
   const [err, setErr] = useState<string | null>(null);
   if (!data) return <Loading />;
-  const save = async () => { try { await api("/settings/users", { body: f }); toast("User invited — they can login with OTP"); setAdd(false); reload(); } catch (e: any) { setErr(e.message); } };
+  const save = async () => { try { await api("/settings/users", { body: { ...f, password: f.password || undefined } }); toast("User added — they can login with mobile + password"); setAdd(false); reload(); } catch (e: any) { setErr(e.message); } };
   const update = async (id: string, body: any) => { try { await api(`/settings/users/${id}`, { method: "PUT", body }); reload(); } catch (e: any) { toast(e.message, "bad"); } };
   return (
     <div className="grid xl:grid-cols-2 gap-4 items-start">
@@ -129,6 +129,7 @@ function Users({ editable }: { editable: boolean }) {
         <div className="space-y-3">
           <Field label="Name"><input className="input" value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></Field>
           <Field label="Mobile (login ID)"><input className="input" inputMode="numeric" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></Field>
+          <Field label="Login password" hint="Min 6 characters · share it with the user"><input className="input" value={f.password} onChange={(e) => setF({ ...f, password: e.target.value })} placeholder="e.g. shop@1234" /></Field>
           <Field label="Role"><select className="input" value={f.role} onChange={(e) => setF({ ...f, role: e.target.value })}>{Object.entries(ROLE_LABEL).filter(([k]) => k !== "OWNER").map(([k, l]) => <option key={k} value={k}>{l} — {ROLE_ACCESS[k]}</option>)}</select></Field>
           <ErrorBox error={err} />
         </div>

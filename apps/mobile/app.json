@@ -39,7 +39,8 @@
       ],
       "expo-secure-store",
       "expo-sharing",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-font"
     ],
     "scheme": "jippronex",
     "primaryColor": "#0B46C4",

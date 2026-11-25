@@ -1,72 +1,72 @@
-import { useEffect, useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { useEffect, useState } from "react";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { router } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Feather } from "@expo/vector-icons";
-import { api, auth } from "@/lib/api";
+import { api, auth, API_URL } from "@/lib/api";
 import { useSession } from "@/lib/session";
-import { Btn, C, ErrorText, s } from "@/components/ui";
+import { Btn, C, ErrorText, Input, Txt } from "@/components/ui";
 import { Logo } from "@/components/Logo";
 
-/** 02 Login with mobile + 03 OTP verification */
+/** 02 Login with mobile (OTP when SMS is set up, otherwise password) + Login with email */
 export default function Login() {
   const { refresh } = useSession();
-  const [step, setStep] = useState<"phone" | "otp">("phone");
+  const [cfg, setCfg] = useState<{ otp: boolean; demoPhone: string | null }>({ otp: false, demoPhone: null });
+  const [mode, setMode] = useState<"mobile" | "email">("mobile");
   const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [devOtp, setDevOtp] = useState<string | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [show, setShow] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [timer, setTimer] = useState(0);
-  const otpRef = useRef<any>(null);
-  useEffect(() => { if (timer <= 0) return; const t = setTimeout(() => setTimer(timer - 1), 1000); return () => clearTimeout(t); }, [timer]);
+  useEffect(() => { fetch(`${API_URL}/api/auth/config`).then((r) => r.json()).then(setCfg).catch(() => {}); }, []);
+  const useOtp = mode === "mobile" && (cfg.otp || (!!cfg.demoPhone && phone === cfg.demoPhone));
 
-  const send = async () => {
-    setErr(null); setBusy(true);
-    try { const r = await api("/auth/otp/send", { body: { phone } }); setDevOtp(r.devOtp || null); setStep("otp"); setTimer(r.resendIn || 30); setTimeout(() => otpRef.current?.focus(), 300); }
-    catch (e: any) { setErr(e.message); } finally { setBusy(false); }
+  const done = async (r: any) => {
+    await auth.set(r.token, r.businesses?.[0]?.id);
+    await refresh();
+    router.replace(r.needsSetup ? "/setup" : "/(tabs)");
   };
-  const verify = async () => {
+  const submit = async () => {
     setErr(null); setBusy(true);
     try {
-      const r = await api("/auth/otp/verify", { body: { phone, code: otp, via: "android" } });
-      await auth.set(r.token, r.businesses?.[0]?.id);
-      await refresh();
-      router.replace(r.needsSetup ? "/setup" : "/(tabs)");
+      if (useOtp) { await api("/auth/otp/send", { body: { phone } }); router.push(`/otp?phone=${phone}`); setBusy(false); return; }
+      await done(await api("/auth/login", { body: { id: mode === "email" ? email : phone, password } }));
     } catch (e: any) { setErr(e.message); setBusy(false); }
   };
+  const ok = mode === "email" ? email.includes("@") && password.length > 0 : phone.length === 10 && (useOtp || password.length > 0);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.white }}>
-      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1, padding: 24, gap: 18 }}>
-        {step === "phone" ? <>
-          <View style={{ marginTop: 24, marginBottom: 16 }}><Logo size={52} /></View>
-          <Text style={{ fontSize: 28, fontWeight: "800", color: C.ink }}>Welcome👋</Text>
-          <Text style={s.muted}>Login with your mobile number</Text>
-          <View style={{ gap: 6 }}>
-            <Text style={s.label}>Mobile number</Text>
-            <View style={{ flexDirection: "row" }}>
-              <View style={[s.input, { borderTopRightRadius: 0, borderBottomRightRadius: 0, backgroundColor: C.bg, justifyContent: "center" }]}><Text style={{ fontWeight: "700" }}>+91</Text></View>
-              <TextInput autoFocus keyboardType="number-pad" maxLength={10} value={phone} onChangeText={(t) => setPhone(t.replace(/\D/g, ""))} placeholder="98300 12345" placeholderTextColor={C.faint}
-                style={[s.input, { flex: 1, borderLeftWidth: 0, borderTopLeftRadius: 0, borderBottomLeftRadius: 0, fontSize: 17, fontWeight: "700", letterSpacing: 1 }]} />
-            </View>
-            <Text style={{ fontSize: 12, color: C.muted }}>We will send a 6-digit OTP on SMS / WhatsApp</Text>
+    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={{ flex: 1 }}>
+        <ScrollView contentContainerStyle={{ flexGrow: 1, padding: 24, gap: 16 }} keyboardShouldPersistTaps="handled">
+          <View style={{ marginTop: 20 }}><Logo size={64} /></View>
+          <View style={{ gap: 4, marginTop: 8 }}>
+            <Txt w="700" size={26}>Welcome 👋</Txt>
+            <Txt color={C.muted}>{mode === "mobile" ? "Login with your mobile number" : "Login with your email"}</Txt>
           </View>
+          {mode === "mobile" ? (
+            <Input label="Mobile number" icon="smartphone" keyboardType="number-pad" maxLength={10} value={phone} onChangeText={(t) => setPhone(t.replace(/\D/g, ""))}
+              placeholder="10-digit mobile number" />
+          ) : (
+            <Input label="Email" icon="mail" keyboardType="email-address" autoCapitalize="none" value={email} onChangeText={setEmail} placeholder="you@business.com" />
+          )}
+          {useOtp ? <Txt size={12.5} color={C.muted} style={{ marginTop: -8 }}>We will send a 6-digit OTP on SMS / WhatsApp</Txt> : (
+            <Input label="Password" icon="lock" secureTextEntry={!show} value={password} onChangeText={setPassword} placeholder="Your password"
+              right={<Pressable onPress={() => setShow(!show)} hitSlop={10}><Feather name={show ? "eye-off" : "eye"} size={18} color={C.muted} /></Pressable>} />
+          )}
           <ErrorText error={err} />
-          <Btn title="Get OTP" onPress={send} loading={busy} disabled={phone.length !== 10} />
+          <Btn title={useOtp ? "Get OTP" : "Login"} icon="arrow-right" onPress={submit} loading={busy} disabled={!ok} />
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><View style={{ flex: 1, height: 1, backgroundColor: C.line }} /><Txt size={12} color={C.faint}>or</Txt><View style={{ flex: 1, height: 1, backgroundColor: C.line }} /></View>
+          <Btn title={mode === "mobile" ? "Login with email" : "Login with mobile number"} icon={mode === "mobile" ? "mail" : "smartphone"} kind="outline" onPress={() => { setErr(null); setMode(mode === "mobile" ? "email" : "mobile"); }} />
           <View style={{ flex: 1 }} />
-          <Text style={{ textAlign: "center", fontSize: 12, color: C.muted }}>By continuing you agree to Terms & Privacy</Text>
-        </> : <>
-          <Pressable onPress={() => setStep("phone")} hitSlop={12} style={{ marginTop: 8 }}><Feather name="arrow-left" size={24} color={C.ink} /></Pressable>
-          <Text style={{ fontSize: 28, fontWeight: "800", color: C.ink }}>Verify OTP</Text>
-          <Text style={s.muted}>Sent to +91 {phone} · <Text style={{ color: C.brand, fontWeight: "700" }} onPress={() => setStep("phone")}>Edit</Text></Text>
-          <TextInput ref={otpRef} keyboardType="number-pad" maxLength={6} value={otp} onChangeText={(t) => setOtp(t.replace(/\D/g, ""))} placeholder="••••••" placeholderTextColor={C.faint}
-            style={[s.input, { height: 64, textAlign: "center", fontSize: 28, fontWeight: "800", letterSpacing: 12 }]} />
-          {devOtp && <Text style={{ backgroundColor: C.warn50, color: C.warn, padding: 10, borderRadius: 10, fontWeight: "700" }}>Test mode OTP: {devOtp}</Text>}
-          <ErrorText error={err} />
-          <Text style={{ textAlign: "center", color: C.muted }}>{timer > 0 ? `Resend OTP in 00:${String(timer).padStart(2, "0")}` : <Text style={{ color: C.brand, fontWeight: "700" }} onPress={send}>Resend OTP</Text>}</Text>
-          <Btn title="Verify & continue" onPress={verify} loading={busy} disabled={otp.length < 4} />
-        </>}
+          <View style={{ backgroundColor: C.brand50, borderRadius: 12, padding: 16, gap: 10 }}>
+            <Txt w="600" color={C.ink}>New shop / retailer?</Txt>
+            <Txt size={13} color={C.ink2}>Create your free account in 1 minute — 7-day free trial, no card needed.</Txt>
+            <Btn title="Register your business" icon="user-plus" kind="white" onPress={() => router.push("/register")} style={{ borderWidth: 1, borderColor: C.brand100 }} />
+          </View>
+          <Txt size={12} color={C.muted} style={{ textAlign: "center" }}>By continuing you agree to Terms & Privacy</Txt>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

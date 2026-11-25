@@ -126,7 +126,7 @@ adminRouter.get("/customers/:id", async (req, res) => {
   const plan = row.plan ? await db.query.plans.findFirst({ where: eq(S.plans.id, row.plan.id) }) : null;
   const custom = row.customPrice ? { ...row.customPrice, planName: (await db.query.plans.findFirst({ where: eq(S.plans.id, row.customPrice.planId) }))?.name } : null;
   res.json({
-    ...row, soldBy: sellerLabel(row.seller), business: biz, ownerUser: owner[0]?.u ?? null, payments, history: subs.map((x) => ({ ...x.s, plan: x.plan })),
+    ...row, soldBy: sellerLabel(row.seller), business: biz, ownerUser: owner[0] ? { ...owner[0].u, passwordHash: undefined, hasPassword: !!owner[0].u.passwordHash } : null, payments, history: subs.map((x) => ({ ...x.s, plan: x.plan })),
     customPrice: custom,
     usage: { invoicesThisMonth: inv.c, products: prod.c, maxProducts: plan?.maxProducts ?? 0, users: users.c, usersAllowed: row.subscription?.usersAllowed ?? 1,
       storageGb: plan?.storageGb ?? 0, lastLoginAt: row.owner?.lastLoginAt, lastLoginVia: row.owner?.via },
@@ -161,6 +161,16 @@ adminRouter.post("/customers/:id/autorenew", async (req, res) => {
   const sub = await currentSubscription(String(req.params.id));
   if (sub) await db.update(S.subscriptions).set({ autoRenew: on }).where(eq(S.subscriptions.id, sub.id));
   res.json({ ok: true });
+});
+
+/** Support: set the owner's login password (customers created from New Sale have none while SMS OTP is off). */
+adminRouter.post("/customers/:id/password", async (req, res) => {
+  const { password } = parse(z.object({ password: z.string().min(6, "Password must be at least 6 characters") }), req.body);
+  const owner = await db.select({ u: S.users }).from(S.memberships).innerJoin(S.users, eq(S.users.id, S.memberships.userId))
+    .where(and(eq(S.memberships.businessId, String(req.params.id)), eq(S.memberships.role, "OWNER"))).limit(1);
+  if (!owner[0]) throw notFound("Owner not found");
+  await db.update(S.users).set({ passwordHash: await bcrypt.hash(password, 10) }).where(eq(S.users.id, owner[0].u.id));
+  res.json({ ok: true, phone: owner[0].u.phone });
 });
 
 /** Opens the customer's CRM as them (support). Token valid 2 hours. */
@@ -216,6 +226,7 @@ const saleSchema = z.object({
   priceMode: z.enum(["LIST", "COUPON", "CUSTOM", "PERCENT"]).default("LIST"), coupon: z.string().optional(), customPrice: z.coerce.number().min(0).optional(),
   percent: z.coerce.number().min(0).max(100).optional(), saveCustomPrice: z.boolean().default(true),
   sellerId: z.string().nullish(), method: z.enum(["LINK", "UPI_QR", "CASH", "BANK"]).default("LINK"), trial: z.boolean().default(false),
+  password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")),
 });
 
 async function quote(d: z.infer<typeof saleSchema>, isPartner: boolean) {
@@ -233,7 +244,7 @@ async function quote(d: z.infer<typeof saleSchema>, isPartner: boolean) {
 }
 
 adminRouter.post("/sales/quote", async (req, res) => {
-  const d = parse(saleSchema.omit({ businessName: true, ownerName: true, phone: true, email: true, gstin: true }), req.body) as z.infer<typeof saleSchema>;
+  const d = parse(saleSchema.omit({ businessName: true, ownerName: true, phone: true, email: true, gstin: true, password: true }), req.body) as z.infer<typeof saleSchema>;
   const q = await quote(d, req.admin!.role === "PARTNER");
   res.json({ ...q, plan: { id: q.plan.id, name: q.plan.name } });
 });
@@ -247,7 +258,7 @@ adminRouter.post("/sales", async (req, res) => {
   const stateCode = stateFromGstin(d.gstin) || d.stateCode || "19";
   const result = await db.transaction(async (tx) => {
     let user = await tx.query.users.findFirst({ where: eq(S.users.phone, phone) });
-    if (!user) [user] = await tx.insert(S.users).values({ phone, name: d.ownerName, email: d.email || null }).returning();
+    if (!user) [user] = await tx.insert(S.users).values({ phone, name: d.ownerName, email: d.email || null, passwordHash: d.password ? await bcrypt.hash(d.password, 10) : null }).returning();
     const n = (await tx.execute(sql`insert into counters (business_id, key, value) values ('__jippronex__', 'CUSTOMER', 1)
       on conflict (business_id, key) do update set value = counters.value + 1 returning value`)).rows[0] as any;
     const [biz] = await tx.insert(S.businesses).values({

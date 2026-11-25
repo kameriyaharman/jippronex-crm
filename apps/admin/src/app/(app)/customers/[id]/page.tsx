@@ -2,7 +2,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { LogIn, Ban, Pencil, MessageCircle, Phone, ArrowLeft, CalendarPlus, ArrowUpCircle, Tag, FileText } from "lucide-react";
+import { LogIn, Ban, Pencil, MessageCircle, Phone, ArrowLeft, CalendarPlus, ArrowUpCircle, Tag, FileText, KeyRound } from "lucide-react";
 import { api, useApi, inr, dt, tm } from "@/lib/api";
 import { useMe } from "@/lib/me";
 import { Loading, Modal, Field, ErrorBox, Pill, Table, Seg, Toggle, cx, useToast } from "@/components/ui";
@@ -16,7 +16,7 @@ export default function CustomerPage() {
   const toast = useToast();
   const { data: c, reload } = useApi<any>(`/customers/${id}`);
   const { data: plansData } = useApi<any>("/plans");
-  const [modal, setModal] = useState<null | "edit" | "extend" | "order" | "price">(null);
+  const [modal, setModal] = useState<null | "edit" | "extend" | "order" | "price" | "password">(null);
   const [link, setLink] = useState<any>(null);
   if (!c) return <Loading />;
   const sub = c.subscription;
@@ -47,6 +47,7 @@ export default function CustomerPage() {
           <div className="flex gap-2 mt-4">
             {c.whatsapp && <a className="btn-wa btn-sm" href={c.whatsapp} target="_blank" rel="noreferrer"><MessageCircle className="size-3.5" />WhatsApp</a>}
             <a className="btn-outline btn-sm" href={`tel:+91${c.owner?.phone}`}><Phone className="size-3.5" />Call</a>
+            <button className="btn-outline btn-sm" onClick={() => setModal("password")}><KeyRound className="size-3.5" />{c.ownerUser?.hasPassword ? "Reset password" : "Set login password"}</button>
           </div>
         </div>
         <div className="card p-5">
@@ -106,6 +107,7 @@ export default function CustomerPage() {
       {modal === "extend" && <Extend id={id} onClose={() => setModal(null)} onSaved={() => { setModal(null); reload(); toast("Validity extended"); }} />}
       {modal === "price" && plansData && <CustomPrice c={c} plans={plansData.plans} onClose={() => setModal(null)} onSaved={() => { setModal(null); reload(); toast("Special price saved"); }} />}
       {modal === "order" && plansData && <Order c={c} plans={plansData.plans} onClose={() => setModal(null)} onDone={(l) => { setModal(null); setLink(l); reload(); }} />}
+      {modal === "password" && <SetPassword c={c} onClose={() => setModal(null)} onSaved={() => { setModal(null); reload(); toast("Login password saved"); }} />}
       <LinkResult data={link} onClose={() => setLink(null)} />
     </div>
   );
@@ -125,6 +127,19 @@ function EditBiz({ c, onClose, onSaved }: any) {
         {(Object.keys(f) as (keyof typeof f)[]).map((k) => <Field key={k} label={k === "ownerName" ? "Owner name" : k[0].toUpperCase() + k.slice(1)} className={k === "address" ? "col-span-2" : ""}>
           <input className="input" value={f[k]} onChange={(e) => setF({ ...f, [k]: e.target.value })} /></Field>)}
       </div>
+      <div className="mt-3"><ErrorBox error={err} /></div>
+    </Modal>
+  );
+}
+function SetPassword({ c, onClose, onSaved }: any) {
+  const [pw, setPw] = useState("");
+  const [err, setErr] = useState<string | null>(null);
+  const gen = () => setPw(Math.random().toString(36).slice(2, 6) + "@" + Math.floor(1000 + Math.random() * 9000));
+  const save = async () => { try { await api(`/customers/${c.id}/password`, { body: { password: pw } }); onSaved(); } catch (e: any) { setErr(e.message); } };
+  return (
+    <Modal open onClose={onClose} title="Owner login password" footer={<><button className="btn-outline" onClick={onClose}>Cancel</button><button className="btn-primary" disabled={pw.length < 6} onClick={save}>Save password</button></>}>
+      <p className="text-sm text-muted mb-3">{c.owner?.name} logs in to the CRM and Android app with mobile <b className="text-ink">+91 {c.owner?.phone}</b> and this password.</p>
+      <Field label="New password"><div className="flex gap-2"><input className="input font-semibold" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Min 6 characters" /><button className="btn-outline" onClick={gen}>Generate</button></div></Field>
       <div className="mt-3"><ErrorBox error={err} /></div>
     </Modal>
   );

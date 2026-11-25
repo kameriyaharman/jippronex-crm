@@ -11,8 +11,8 @@ export default function TabsLayout() {
   const bottom = Math.max(insets.bottom, 8);
   return (
     <Tabs screenOptions={{
-      headerShown: false, tabBarActiveTintColor: C.brand, tabBarInactiveTintColor: C.faint,
-      tabBarLabelStyle: { fontWeight: "700", fontSize: 11 },
+      headerShown: false, tabBarActiveTintColor: C.brand, tabBarInactiveTintColor: C.muted,
+      tabBarLabelStyle: { fontFamily: "Inter_500Medium", fontSize: 11.5 },
       tabBarStyle: { height: 58 + bottom, paddingTop: 6, paddingBottom: bottom, backgroundColor: C.white, borderTopColor: C.line },
     }}>
       <Tabs.Screen name="index" options={{ title: "Home", tabBarIcon: icon("home") }} />

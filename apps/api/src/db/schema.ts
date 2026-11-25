@@ -38,6 +38,7 @@ export const users = pgTable("users", {
   name: text("name").notNull(),
   phone: text("phone").notNull().unique(), // 10-digit login id
   email: text("email").unique(),
+  passwordHash: text("password_hash"),
   lastLoginAt: ts("last_login_at"),
   lastLoginVia: text("last_login_via"),
   createdAt: createdAt(),

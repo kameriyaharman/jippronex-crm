@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { db, schema as S } from "../../db/index.js";
 import { parse, bad, notFound, normPhone, forbidden } from "../../lib/util.js";
 import { need, PERMS } from "../../lib/auth.js";
@@ -47,7 +48,7 @@ settingsRouter.get("/users", async (req, res) => {
 });
 
 settingsRouter.post("/users", need("settings"), async (req, res) => {
-  const d = parse(z.object({ name: z.string().min(1), phone: z.string(), role: z.enum(["BILLING", "ACCOUNTANT", "STORE", "OWNER"]) }), req.body);
+  const d = parse(z.object({ name: z.string().min(1), phone: z.string(), role: z.enum(["BILLING", "ACCOUNTANT", "STORE", "OWNER"]), password: z.string().min(6, "Password must be at least 6 characters").optional().or(z.literal("")) }), req.body);
   const phone = normPhone(d.phone);
   if (!/^[6-9]\d{9}$/.test(phone)) throw bad("Enter a valid mobile number");
   const sub = await currentSubscription(req.businessId!);
@@ -55,6 +56,8 @@ settingsRouter.post("/users", need("settings"), async (req, res) => {
   if (cnt.c >= (sub?.usersAllowed ?? 1)) throw bad(`Your plan allows ${sub?.usersAllowed ?? 1} users. Upgrade or add an extra user.`);
   let u = await db.query.users.findFirst({ where: eq(S.users.phone, phone) });
   if (!u) [u] = await db.insert(S.users).values({ name: d.name, phone }).returning();
+  // Owner can give staff a starting password (needed while SMS OTP is not set up)
+  if (d.password && !u.passwordHash) await db.update(S.users).set({ passwordHash: await bcrypt.hash(d.password, 10) }).where(eq(S.users.id, u.id));
   const [m] = await db.insert(S.memberships).values({ userId: u.id, businessId: req.businessId!, role: d.role, status: "INVITED" })
     .onConflictDoUpdate({ target: [S.memberships.userId, S.memberships.businessId], set: { role: d.role, status: "INVITED" } }).returning();
   res.status(201).json(m);

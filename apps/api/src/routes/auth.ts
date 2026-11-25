@@ -1,5 +1,6 @@
 import { Router } from "express";
 import crypto from "node:crypto";
+import bcrypt from "bcryptjs";
 import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema as S } from "../db/index.js";
@@ -11,6 +12,76 @@ import { stateFromGstin, GST_STATES } from "../lib/gst.js";
 
 export const authRouter = Router();
 const hash = (s: string) => crypto.createHash("sha256").update(s).digest("hex");
+
+/** Which login methods are available (SMS OTP needs a provider). */
+authRouter.get("/config", (_req, res) => {
+  const sms = (process.env.SMS_PROVIDER || "none") !== "none";
+  res.json({ otp: sms || process.env.OTP_DEV_MODE === "true", password: true, demoPhone: process.env.DEMO_PHONE || null });
+});
+
+// Simple in-memory throttle for password attempts (per phone/email, 10 per 15 min)
+const attempts = new Map<string, { n: number; t: number }>();
+function throttle(key: string) {
+  const now = Date.now();
+  const a = attempts.get(key);
+  if (!a || now - a.t > 15 * 60000) { attempts.set(key, { n: 1, t: now }); return; }
+  if (++a.n > 10) throw new HttpError(429, "Too many attempts. Try again in 15 minutes.");
+}
+
+/** Retailer self-registration: name + mobile + password (+ optional email). */
+authRouter.post("/register", async (req, res) => {
+  const d = parse(z.object({ name: z.string().trim().min(2, "Enter your name"), phone: z.string(), password: z.string().min(6, "Password must be at least 6 characters"),
+    email: z.string().trim().toLowerCase().email("Enter a valid email").optional().or(z.literal("")) }), req.body);
+  const phone = normPhone(d.phone);
+  if (!/^[6-9]\d{9}$/.test(phone)) throw bad("Enter a valid 10-digit mobile number");
+  throttle("reg:" + (req.ip || ""));
+  const existing = await db.query.users.findFirst({ where: eq(S.users.phone, phone) });
+  if (existing?.passwordHash) throw bad("This mobile number is already registered. Please login.");
+  if (existing) {
+    // Without SMS verification we can't prove ownership — never let a stranger take over an existing business account
+    const linked = await db.select({ id: S.memberships.id }).from(S.memberships).where(eq(S.memberships.userId, existing.id)).limit(1);
+    if (linked.length || phone === process.env.DEMO_PHONE) throw bad("This number is already linked to a business. Ask your shop owner or Jippronex support to set your password.");
+  }
+  if (d.email) {
+    const e = await db.query.users.findFirst({ where: eq(S.users.email, d.email) });
+    if (e && e.id !== existing?.id) throw bad("This email is already registered");
+  }
+  const passwordHash = await bcrypt.hash(d.password, 10);
+  let user;
+  if (existing) {
+    [user] = await db.update(S.users).set({ passwordHash, name: existing.name === "Owner" ? d.name : existing.name, email: d.email || existing.email }).where(eq(S.users.id, existing.id)).returning();
+    await db.update(S.memberships).set({ status: "ACTIVE" }).where(and(eq(S.memberships.userId, user.id), eq(S.memberships.status, "INVITED")));
+  } else {
+    [user] = await db.insert(S.users).values({ name: d.name, phone, email: d.email || null, passwordHash }).returning();
+  }
+  await db.update(S.users).set({ lastLoginAt: new Date(), lastLoginVia: (req.headers["x-client"] as string) || "web" }).where(eq(S.users.id, user.id));
+  res.status(201).json({ token: signUser(user.id), ...(await meFor(user.id)) });
+});
+
+/** Login with mobile or email + password */
+authRouter.post("/login", async (req, res) => {
+  const d = parse(z.object({ id: z.string().trim().min(3, "Enter mobile number or email"), password: z.string().min(1, "Enter password") }), req.body);
+  const isEmail = d.id.includes("@");
+  const key = isEmail ? d.id.toLowerCase() : normPhone(d.id);
+  throttle("login:" + key);
+  const user = await db.query.users.findFirst({ where: isEmail ? eq(S.users.email, key) : eq(S.users.phone, key) });
+  if (!user) throw bad(isEmail ? "No account with this email" : "This number is not registered. Tap Register to create an account.");
+  if (!user.passwordHash) throw bad("Password not set for this account. Tap Register with the same mobile number to set one.");
+  if (!(await bcrypt.compare(d.password, user.passwordHash))) throw bad("Wrong password");
+  attempts.delete("login:" + key);
+  await db.update(S.users).set({ lastLoginAt: new Date(), lastLoginVia: (req.headers["x-client"] as string) || "web" }).where(eq(S.users.id, user.id));
+  await db.update(S.memberships).set({ status: "ACTIVE" }).where(and(eq(S.memberships.userId, user.id), eq(S.memberships.status, "INVITED")));
+  res.json({ token: signUser(user.id), ...(await meFor(user.id)) });
+});
+
+/** Change / set password when logged in */
+authRouter.post("/password", requireUser, async (req, res) => {
+  const d = parse(z.object({ current: z.string().optional(), password: z.string().min(6, "Password must be at least 6 characters") }), req.body);
+  const u = req.user!;
+  if (u.passwordHash && !(d.current && (await bcrypt.compare(d.current, u.passwordHash)))) throw bad("Current password is wrong");
+  await db.update(S.users).set({ passwordHash: await bcrypt.hash(d.password, 10) }).where(eq(S.users.id, u.id));
+  res.json({ ok: true });
+});
 
 authRouter.post("/otp/send", async (req, res) => {
   const { phone } = parse(z.object({ phone: z.string() }), req.body);
@@ -48,7 +119,9 @@ authRouter.post("/otp/verify", async (req, res) => {
 });
 
 async function meFor(userId: string) {
-  const user = await db.query.users.findFirst({ where: eq(S.users.id, userId) });
+  const u = await db.query.users.findFirst({ where: eq(S.users.id, userId) });
+  const { passwordHash, ...rest } = u || ({} as any);
+  const user = u ? { ...rest, hasPassword: !!passwordHash } : null;
   const rows = await db.select({ m: S.memberships, b: S.businesses }).from(S.memberships)
     .innerJoin(S.businesses, eq(S.businesses.id, S.memberships.businessId))
     .where(and(eq(S.memberships.userId, userId), eq(S.memberships.status, "ACTIVE")))
