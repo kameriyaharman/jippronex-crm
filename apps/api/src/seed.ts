@@ -159,7 +159,7 @@ async function seedShop() {
       if (dow === 6 && !isToday) {
         for (const [, sid] of sups) {
           const [cur] = await tx.select().from(S.parties).where(eq(S.parties.id, sid));
-          if (cur.balance < -10000 && rnd() < 0.7) await recordPayment(tx, b, { direction: "OUT", partyId: sid, amount: Math.round((-cur.balance * 0.8) / 1000) * 1000, mode: "BANK", account: pick(["SBI", "HDFC"]), date: new Date(d.getTime() + 9 * 3600000), allocations: "auto" });
+          if (cur.balance < -10000 && rnd() < 0.7) await recordPayment(tx, b, { direction: "OUT", partyId: sid, amount: Math.round((-cur.balance * 0.8) / 1000) * 1000, ...(rnd() < 0.6 ? { mode: "CASH" as const } : { mode: "BANK" as const, account: pick(["SBI", "HDFC"]) }), date: new Date(d.getTime() + 9 * 3600000), allocations: "auto" });
         }
       }
       // Monthly expenses
