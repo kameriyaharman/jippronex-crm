@@ -67,11 +67,11 @@ const supplierFor = (name: string) =>
   /Parle/.test(name) ? "Parle Depot" : /Tata/.test(name) ? "Tata Consumer" : /Dabur/.test(name) ? "Dabur Agency" : /Parachute/.test(name) ? "Marico Depot" :
   /Maggi|Nescafe/.test(name) ? "Nestle Agency" : "ITC Distributors";
 
-async function seedShop() {
+async function seedShop(code?: string) {
   const [owner] = await db.insert(S.users).values({ name: "Rakesh Sharma", phone: "9830012345", email: "rakesh@sharmatraders.in" }).returning();
-  const n = (await db.execute(sql`insert into counters (business_id, key, value) values ('__jippronex__','CUSTOMER',214) on conflict (business_id,key) do update set value = 214 returning value`)).rows[0] as any;
+  const n = code ? { value: 0 } : (await db.execute(sql`insert into counters (business_id, key, value) values ('__jippronex__','CUSTOMER',214) on conflict (business_id,key) do update set value = 214 returning value`)).rows[0] as any;
   const [biz] = await db.insert(S.businesses).values({
-    code: `JX-C-${String(n.value).padStart(5, "0")}`, name: "Sharma Traders", ownerName: "Rakesh Sharma", phone: "9830012345", email: "sharmatraders@gmail.com",
+    code: code || `JX-C-${String(n.value).padStart(5, "0")}`, name: "Sharma Traders", ownerName: "Rakesh Sharma", phone: "9830012345", email: "sharmatraders@gmail.com",
     gstin: "19ABCPS1234K1Z5", businessType: "Retail / Wholesale — Grocery", address: "12, Bazar Road, Asansol, West Bengal", city: "Asansol", state: "West Bengal",
     stateCode: "19", pincode: "713301", bankName: "State Bank of India, Asansol Branch", bankAccount: "34567812 0091", bankIfsc: "SBIN0001234", upiId: "sharmatraders@sbi",
     terms: "1. Goods once sold will not be taken back.\n2. Interest @18% p.a. after due date.\n3. Subject to Asansol jurisdiction.",
@@ -312,6 +312,19 @@ export async function seedDemo(opts: { withLogins?: boolean } = {}) {
 const isCli = /seed\.(ts|js)$/.test(process.argv[1] || "");
 if (isCli) (async () => {
   await runMigrations();
+  if (process.argv.includes("--demo-shop")) {
+    // Production demo account: only the Sharma Traders shop, no fake SaaS customers/revenue.
+    await bootstrap();
+    const exists = (await db.execute(sql`select 1 from businesses where code = 'JX-DEMO' or phone = '9830012345' limit 1`)).rows.length;
+    if (exists) { console.log("Demo shop already present"); await pool.end(); return; }
+    const t = Date.now();
+    const shop = await seedShop("JX-DEMO");
+    const plan = await db.query.plans.findFirst({ where: eq(S.plans.code, "COMPLETE") });
+    const start = addDays(new Date(), -30);
+    await db.insert(S.subscriptions).values({ businessId: shop.id, planId: plan!.id, cycle: "YEARLY", status: "ACTIVE", listPrice: plan!.yearlyPrice, price: 0, usersAllowed: 5, startsAt: start, endsAt: addDays(start, 365) });
+    console.log(`Demo shop created in ${((Date.now() - t) / 1000).toFixed(1)}s`);
+    await pool.end(); return;
+  }
   const doReset = process.argv.includes("--reset");
   const [c] = await db.select({ c: sql<number>`count(*)::int` }).from(S.businesses);
   if (c.c && !doReset) {
