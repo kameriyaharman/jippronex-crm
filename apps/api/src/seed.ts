@@ -314,7 +314,11 @@ if (isCli) (async () => {
   await runMigrations();
   const doReset = process.argv.includes("--reset");
   const [c] = await db.select({ c: sql<number>`count(*)::int` }).from(S.businesses);
-  if (c.c && !doReset) { console.log("Database already has data. Use --reset to wipe and reseed."); await pool.end(); return; }
+  if (c.c && !doReset) {
+    const st = (await db.execute(sql`select (select count(*) from businesses)::int b, (select count(*) from invoices)::int i, (select max(date) from invoices) last, (select count(*) from subscriptions)::int s, (select count(*) from admin_users)::int a`)).rows[0];
+    console.log("Database already has data. Use --reset to wipe and reseed.", JSON.stringify(st));
+    await pool.end(); return;
+  }
   if (doReset) await reset();
   await bootstrap();
   const t = Date.now();
